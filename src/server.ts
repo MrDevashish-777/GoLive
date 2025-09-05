@@ -1,20 +1,27 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import http from 'http';
+import { Server as SocketIOServer } from 'socket.io';
 import env from './config';
 import { errorHandler } from './middlewares/errorHandler';
+import giftRoutes from './routes/gift';
 import healthRoutes from './routes/health';
+import messageRoutes from './routes/message';
+import roomRoutes from './routes/room';
 import tokenRoutes from './routes/token';
 import { morganMiddleware } from './utils/logger';
 
 const app = express();
+const server = http.createServer(app);
+const io = new SocketIOServer(server, { cors: { origin: '*' } });
 
 app.use(helmet());
 app.use(express.json());
 app.use(morganMiddleware);
 
 // Allow comma-separated origins or "*" via FRONTEND_ORIGIN
-const allowedOrigins = env.FRONTEND_ORIGIN.split(',').map((o) => o.trim());
+const allowedOrigins = env.FRONTEND_ORIGIN.split(',').map((o: string) => o.trim());
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true); // allow mobile/native with no origin
@@ -27,9 +34,36 @@ app.use(cors({
 app.use('/api', tokenRoutes);
 app.use('/api', healthRoutes);
 
+// API routes for live video app
+app.use('/api/rooms', roomRoutes);
+app.use('/api/messages', messageRoutes);
+app.use('/api/gifts', giftRoutes);
+
 app.use(errorHandler);
 
-app.listen(env.PORT, env.NODE_IP, () => {
+// Socket.IO for real-time chat and gifting
+io.on('connection', (socket: any) => {
+  console.log('User connected:', socket.id);
+
+  socket.on('joinRoom', (roomId: string) => {
+    socket.join(roomId);
+  });
+
+  socket.on('chatMessage', (data: any) => {
+    io.to(data.roomId).emit('chatMessage', data);
+  });
+
+  socket.on('sendGift', (data: any) => {
+    io.to(data.roomId).emit('giftReceived', data);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('User disconnected:', socket.id);
+  });
+});
+
+// Start both HTTP and Socket.IO server
+server.listen(env.PORT, env.NODE_IP, () => {
   // eslint-disable-next-line no-console
   console.log(`Server running on http://${env.NODE_IP}:${env.PORT}`);
 });
