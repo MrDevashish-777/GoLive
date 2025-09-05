@@ -1,16 +1,16 @@
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
-import env from './config';
-import { errorHandler } from './middlewares/errorHandler';
-import healthRoutes from './routes/health';
-import tokenRoutes from './routes/token';
-import { morganMiddleware } from './utils/logger';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
-import roomRoutes from './routes/room';
-import messageRoutes from './routes/message';
+import env from './config';
+import { errorHandler } from './middlewares/errorHandler';
 import giftRoutes from './routes/gift';
+import healthRoutes from './routes/health';
+import messageRoutes from './routes/message';
+import roomRoutes from './routes/room';
+import tokenRoutes from './routes/token';
+import { morganMiddleware } from './utils/logger';
 
 const app = express();
 const server = http.createServer(app);
