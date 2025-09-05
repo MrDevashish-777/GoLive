@@ -1,3 +1,65 @@
+# LiveKit Backend (Node.js + Express + TypeScript)
+
+A secure, production-ready backend for a LiveKit-powered live streaming app.
+
+## Features
+- Secure JWT token generation for LiveKit
+- Publisher/viewer permissions
+- Rate limiting, CORS, helmet, centralized error handling
+- Health check endpoint
+- Logging with winston & morgan
+- Docker & docker-compose for deployment
+- TypeScript strict mode
+
+## Project Structure
+```
+src/
+   config/         # env loader, validation
+   controllers/    # token & health controllers
+   middlewares/    # error handling, rate limiting
+   routes/         # API endpoints
+   utils/          # token generator, logger
+   server.ts       # entrypoint
+```
+
+## Setup
+
+1. **Clone & Install**
+```sh
+git clone <repo-url>
+cd GoLive
+npm install
+```
+
+
+
+3. **Run in Development**
+```sh
+npm run dev
+```
+
+4. **Build & Start (Production)**
+```sh
+npm run build
+npm start
+```
+
+5. **Docker Compose (Backend + LiveKit)**
+```sh
+docker-compose up --build
+```
+
+## Endpoints
+- `GET /api/getToken?roomName=...&identity=...&isPublisher=...` — Get LiveKit JWT
+- `GET /api/health` — Health check
+
+## Deployment
+- Ready for AWS/GCP/Heroku (see Dockerfile & docker-compose.yml)
+- Expose port 3001 (backend) and 7880/7881 (LiveKit)
+- Use HTTPS in production
+
+## License
+MIT
 # Welcome to your Expo app 👋
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
