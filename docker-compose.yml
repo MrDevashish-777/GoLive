@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  backend:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "3001:3001"
+    depends_on:
+      - livekit
+    restart: unless-stopped
+  livekit:
+    image: livekit/livekit-server:latest
+    environment:
+      LIVEKIT_API_KEY: ${API_KEY}
+      LIVEKIT_API_SECRET: ${API_SECRET}
+      LIVEKIT_PORT: 7880
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+    restart: unless-stopped
