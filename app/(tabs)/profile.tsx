@@ -7,7 +7,7 @@ export default function ProfileScreen() {
 
   const handleLogout = () => {
     // Replace the current route so user can't go back to tabs
-    router.replace('/login');
+    router.replace('../login');
   };
 
   return (

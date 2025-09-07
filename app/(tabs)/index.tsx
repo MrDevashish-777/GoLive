@@ -1,9 +1,9 @@
-import { useLocalSearchParams } from 'expo-router';
-import React, { useState, useEffect, useRef } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import LiveKitRoom from '@/components/LiveKitRoom';
 import socketService, { ChatMessage, Gift } from '@/services/socketService';
+import MaterialIcons from '@expo/vector-icons/MaterialIcons';
+import { useLocalSearchParams } from 'expo-router';
+import React, { useEffect, useRef, useState } from 'react';
+import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 
 const gifts = [
   { id: 1, name: 'Rose', amount: 1, gif: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExN2NrbjZrdnJtYm55a3JtaGpoZ3A4d3k4c2s4c2pna2NpejV3eWJvdyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/c76IJLufpN5wA/giphy.gif' },
@@ -121,21 +121,21 @@ const UserScreen = () => {
             onSubmitEditing={sendMessage}
           />
           <TouchableOpacity onPress={sendMessage}>
-            <IconSymbol name="send" size={24} color="white" />
+            <MaterialIcons name="send" size={24} color="white" />
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.footer}>
         <TouchableOpacity onPress={() => setShowGifts(true)} style={styles.iconButton}>
-          <IconSymbol name="gift" size={32} color="white" />
+          <MaterialIcons name="card-giftcard" size={32} color="white" />
         </TouchableOpacity>
       </View>
 
       {showGifts && (
         <View style={styles.giftsPopup}>
           <TouchableOpacity onPress={() => setShowGifts(false)} style={styles.closeButton}>
-            <IconSymbol name="close" size={28} color="white" />
+            <MaterialIcons name="close" size={28} color="white" />
           </TouchableOpacity>
           <ScrollView contentContainerStyle={styles.giftsGrid}>
             {gifts.map((gift) => (
@@ -265,7 +265,7 @@ const StreamerScreen = () => {
           style={styles.iconButton}
           disabled={!isLive}
         >
-          <IconSymbol 
+          <MaterialIcons 
             name={micOn ? 'mic' : 'mic-off'} 
             size={32} 
             color={!isLive ? 'gray' : (micOn ? 'white' : 'red')} 
@@ -276,7 +276,7 @@ const StreamerScreen = () => {
           style={styles.iconButton}
           disabled={!isLive}
         >
-          <IconSymbol 
+          <MaterialIcons 
             name={cameraOn ? 'videocam' : 'videocam-off'} 
             size={32} 
             color={!isLive ? 'gray' : (cameraOn ? 'white' : 'red')} 
@@ -288,7 +288,8 @@ const StreamerScreen = () => {
 };
 
 export default function HomeScreen() {
-  const { role } = useLocalSearchParams();
+  const params = useLocalSearchParams();
+  const role = params.role as string;
 
   if (role === 'streamer') {
     return <StreamerScreen />;

@@ -1,14 +1,14 @@
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  View, 
-  KeyboardAvoidingView, 
+import {
+  KeyboardAvoidingView,
   Platform,
-  ScrollView
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 export default function LoginScreen() {
@@ -18,7 +18,7 @@ export default function LoginScreen() {
 
   const handleLogin = () => {
     if ((email === 'streamer@gmail.com' || email === 'user@gmail.com') && password) {
-      router.replace({ pathname: '/(tabs)', params: { role: email === 'streamer@gmail.com' ? 'streamer' : 'user' } });
+      router.replace({ pathname: '../(tabs)', params: { role: email === 'streamer@gmail.com' ? 'streamer' : 'user' } });
     } else {
       alert('Invalid credentials');
     }

@@ -1,11 +1,12 @@
 {
   "compilerOptions": {
-    "target": "ES2021",
-    "module": "commonjs",
+    "target": "ES2022",
+    "module": "ESNext",
     "outDir": "dist",
-    "rootDir": "src",
+  "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
+    "moduleResolution": "bundler",
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
     "jsx": "react-native",
