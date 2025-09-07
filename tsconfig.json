@@ -7,12 +7,28 @@
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "jsx": "react-native",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@components/*": ["./components/*"],
+      "@services/*": ["./services/*"],
+      "@config/*": ["./config/*"],
+      "@hooks/*": ["./hooks/*"],
+      "@constants/*": ["./constants/*"]
+    }
   },
   "include": [
     "src/**/*",
     ".expo/types/**/*.ts",
-    "expo-env.d.ts"
+    "expo-env.d.ts",
+    "app/**/*",
+    "components/**/*",
+    "services/**/*",
+    "config/**/*",
+    "hooks/**/*",
+    "constants/**/*"
   ],
   "exclude": [
     "node_modules",

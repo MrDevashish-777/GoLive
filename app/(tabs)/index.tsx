@@ -1,7 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import React, { useState } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
+import { IconSymbol } from '@/components/ui/IconSymbol';
+import LiveKitRoom from '@/components/LiveKitRoom';
+import socketService, { ChatMessage, Gift } from '@/services/socketService';
 
 const gifts = [
   { id: 1, name: 'Rose', amount: 1, gif: 'https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExN2NrbjZrdnJtYm55a3JtaGpoZ3A4d3k4c2s4c2pna2NpejV3eWJvdyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/c76IJLufpN5wA/giphy.gif' },
@@ -13,10 +15,69 @@ const gifts = [
 
 const UserScreen = () => {
   const [showGifts, setShowGifts] = useState(false);
+  const [message, setMessage] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [receivedGifts, setReceivedGifts] = useState<Gift[]>([]);
+  const [roomConnected, setRoomConnected] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  
+  // Current room and user info - in a real app, this would come from auth/state
+  const roomId = 'main-room';
+  const userId = 'user-123';
+  const username = 'Viewer';
+  
+  // Connect to socket when component mounts
+  useEffect(() => {
+    socketService.connect(userId, username);
+    socketService.joinRoom(roomId);
+    
+    // Set up message listener
+    socketService.on('chatMessage', (newMessage: ChatMessage) => {
+      setMessages(prev => [...prev, newMessage]);
+      // Scroll to bottom when new message arrives
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    });
+    
+    // Set up gift listener
+    socketService.on('giftReceived', (gift: Gift) => {
+      setReceivedGifts(prev => [...prev, gift]);
+      // Show gift animation (in a real app)
+      Alert.alert('Gift Received', `${gift.username} sent a ${gift.giftName}!`);
+    });
+    
+    // Cleanup on unmount
+    return () => {
+      socketService.leaveRoom(roomId);
+      socketService.disconnect();
+    };
+  }, []);
+  
+  // Send a message
+  const sendMessage = () => {
+    if (!message.trim()) return;
+    
+    socketService.sendMessage(roomId, message);
+    setMessage('');
+  };
+  
+  // Send a gift
+  const sendGift = (giftId: number) => {
+    socketService.sendGift(roomId, giftId);
+    setShowGifts(false);
+  };
 
   return (
     <View style={styles.container}>
-      <View style={styles.cameraView} />
+      {/* LiveKit Room for video streaming */}
+      <LiveKitRoom 
+        roomName={roomId}
+        identity={userId}
+        isPublisher={false}
+        onConnected={() => setRoomConnected(true)}
+        onDisconnected={() => setRoomConnected(false)}
+      />
 
       <View style={styles.header}>
         <View style={styles.userInfo}>
@@ -32,36 +93,61 @@ const UserScreen = () => {
       </View>
 
       <View style={styles.liveChatContainer}>
-        <ScrollView style={styles.liveChat}>
-          <Text style={styles.chatMessage}><Text style={styles.chatUser}>User1:</Text> Hello!</Text>
-          <Text style={styles.chatMessage}><Text style={styles.chatUser}>User2:</Text> Hi there!</Text>
+        <ScrollView 
+          ref={scrollViewRef}
+          style={styles.liveChat}
+          contentContainerStyle={styles.chatContent}
+        >
+          {messages.length > 0 ? (
+            messages.map((msg, index) => (
+              <Text key={index} style={styles.chatMessage}>
+                <Text style={styles.chatUser}>{msg.username}:</Text> {msg.message}
+              </Text>
+            ))
+          ) : (
+            <>
+              <Text style={styles.chatMessage}><Text style={styles.chatUser}>User1:</Text> Hello!</Text>
+              <Text style={styles.chatMessage}><Text style={styles.chatUser}>User2:</Text> Hi there!</Text>
+            </>
+          )}
         </ScrollView>
         <View style={styles.chatInputContainer}>
-          <TextInput style={styles.chatInput} placeholder="Send a message..." placeholderTextColor="gray" />
-          <TouchableOpacity>
-            <Ionicons name="send" size={24} color="white" />
+          <TextInput 
+            style={styles.chatInput} 
+            placeholder="Send a message..." 
+            placeholderTextColor="gray"
+            value={message}
+            onChangeText={setMessage}
+            onSubmitEditing={sendMessage}
+          />
+          <TouchableOpacity onPress={sendMessage}>
+            <IconSymbol name="send" size={24} color="white" />
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.footer}>
         <TouchableOpacity onPress={() => setShowGifts(true)} style={styles.iconButton}>
-          <Ionicons name="gift" size={32} color="white" />
+          <IconSymbol name="gift" size={32} color="white" />
         </TouchableOpacity>
       </View>
 
       {showGifts && (
         <View style={styles.giftsPopup}>
           <TouchableOpacity onPress={() => setShowGifts(false)} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color="white" />
+            <IconSymbol name="close" size={28} color="white" />
           </TouchableOpacity>
           <ScrollView contentContainerStyle={styles.giftsGrid}>
             {gifts.map((gift) => (
-              <View key={gift.id} style={styles.giftItem}>
+              <TouchableOpacity 
+                key={gift.id} 
+                style={styles.giftItem}
+                onPress={() => sendGift(gift.id)}
+              >
                 <Image source={{ uri: gift.gif }} style={styles.giftGif} />
                 <Text style={styles.giftName}>{gift.name}</Text>
                 <Text style={styles.giftAmount}>{gift.amount}</Text>
-              </View>
+              </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
@@ -73,10 +159,66 @@ const UserScreen = () => {
 const StreamerScreen = () => {
   const [micOn, setMicOn] = useState(true);
   const [cameraOn, setCameraOn] = useState(true);
+  const [isLive, setIsLive] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [receivedGifts, setReceivedGifts] = useState<Gift[]>([]);
+  const scrollViewRef = useRef<ScrollView>(null);
+  
+  // Current room and user info - in a real app, this would come from auth/state
+  const roomId = 'main-room';
+  const userId = 'streamer-123';
+  const username = 'Streamer';
+  
+  // Connect to socket when component mounts
+  useEffect(() => {
+    socketService.connect(userId, username);
+    socketService.joinRoom(roomId);
+    
+    // Set up message listener
+    socketService.on('chatMessage', (newMessage: ChatMessage) => {
+      setMessages(prev => [...prev, newMessage]);
+      // Scroll to bottom when new message arrives
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    });
+    
+    // Set up gift listener
+    socketService.on('giftReceived', (gift: Gift) => {
+      setReceivedGifts(prev => [...prev, gift]);
+      // Show gift animation (in a real app)
+      Alert.alert('Gift Received', `${gift.username} sent a ${gift.giftName}!`);
+    });
+    
+    // Cleanup on unmount
+    return () => {
+      socketService.leaveRoom(roomId);
+      socketService.disconnect();
+    };
+  }, []);
+  
+  // Toggle live status
+  const toggleLiveStatus = () => {
+    setIsLive(!isLive);
+  };
 
   return (
     <View style={styles.container}>
-      <View style={styles.cameraView} />
+      {/* LiveKit Room for broadcasting */}
+      {isLive && (
+        <LiveKitRoom 
+          roomName={roomId}
+          identity={userId}
+          isPublisher={true}
+          onConnected={() => console.log('Connected to LiveKit room')}
+          onDisconnected={() => {
+            console.log('Disconnected from LiveKit room');
+            setIsLive(false);
+          }}
+        />
+      )}
+      
+      {!isLive && <View style={styles.cameraView} />}
 
       <View style={styles.header}>
         <View style={styles.userInfo}>
@@ -86,24 +228,59 @@ const StreamerScreen = () => {
             <Text style={styles.followers}>1.2M followers</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.goLiveButton}>
-          <Text style={styles.goLiveButtonText}>Go Live</Text>
+        <TouchableOpacity 
+          style={[styles.goLiveButton, isLive && styles.endLiveButton]}
+          onPress={toggleLiveStatus}
+        >
+          <Text style={styles.goLiveButtonText}>
+            {isLive ? 'End Stream' : 'Go Live'}
+          </Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.liveChatContainer}>
-        <ScrollView style={styles.liveChat}>
-          <Text style={styles.chatMessage}><Text style={styles.chatUser}>User1:</Text> Hello!</Text>
-          <Text style={styles.chatMessage}><Text style={styles.chatUser}>User2:</Text> Hi there!</Text>
+        <ScrollView 
+          ref={scrollViewRef}
+          style={styles.liveChat}
+          contentContainerStyle={styles.chatContent}
+        >
+          {messages.length > 0 ? (
+            messages.map((msg, index) => (
+              <Text key={index} style={styles.chatMessage}>
+                <Text style={styles.chatUser}>{msg.username}:</Text> {msg.message}
+              </Text>
+            ))
+          ) : (
+            <>
+              <Text style={styles.chatMessage}><Text style={styles.chatUser}>User1:</Text> Hello!</Text>
+              <Text style={styles.chatMessage}><Text style={styles.chatUser}>User2:</Text> Hi there!</Text>
+            </>
+          )}
         </ScrollView>
       </View>
 
       <View style={styles.footer}>
-        <TouchableOpacity onPress={() => setMicOn(!micOn)} style={styles.iconButton}>
-          <Ionicons name={micOn ? 'mic' : 'mic-off'} size={32} color={micOn ? 'white' : 'red'} />
+        <TouchableOpacity 
+          onPress={() => setMicOn(!micOn)} 
+          style={styles.iconButton}
+          disabled={!isLive}
+        >
+          <IconSymbol 
+            name={micOn ? 'mic' : 'mic-off'} 
+            size={32} 
+            color={!isLive ? 'gray' : (micOn ? 'white' : 'red')} 
+          />
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setCameraOn(!cameraOn)} style={styles.iconButton}>
-          <Ionicons name={cameraOn ? 'videocam' : 'videocam-off'} size={32} color={cameraOn ? 'white' : 'red'} />
+        <TouchableOpacity 
+          onPress={() => setCameraOn(!cameraOn)} 
+          style={styles.iconButton}
+          disabled={!isLive}
+        >
+          <IconSymbol 
+            name={cameraOn ? 'videocam' : 'videocam-off'} 
+            size={32} 
+            color={!isLive ? 'gray' : (cameraOn ? 'white' : 'red')} 
+          />
         </TouchableOpacity>
       </View>
     </View>
@@ -137,6 +314,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    zIndex: 10,
   },
   userInfo: {
     flexDirection: 'row',
@@ -176,6 +354,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 25,
   },
+  endLiveButton: {
+    backgroundColor: '#F44336',
+  },
   goLiveButtonText: {
     color: 'white',
     fontWeight: 'bold',
@@ -190,9 +371,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     borderRadius: 10,
     padding: 10,
+    zIndex: 5,
   },
   liveChat: {
     flex: 1,
+  },
+  chatContent: {
+    paddingBottom: 10,
   },
   chatMessage: {
     color: 'white',
@@ -224,6 +409,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 10,
   },
   iconButton: {
     marginHorizontal: 20,
@@ -239,11 +425,13 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
+    zIndex: 20,
   },
   closeButton: {
     position: 'absolute',
     top: 20,
     right: 20,
+    zIndex: 25,
   },
   giftsGrid: {
     flexDirection: 'row',
